@@ -1,6 +1,3 @@
-// Copyright 2025 Hiro420, PotRooms
-// SPDX-License-Identifier: GPL-3.0-only
-
 use std::{
     collections::BTreeMap,
     fs::{self, File},

@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0-only
-
 use std::{collections::BTreeSet, fs};
 
 use anyhow::{Context, Result, bail};
@@ -90,7 +88,7 @@ pub(crate) fn read_tables(path: &Utf8Path) -> Result<Vec<Table>> {
         if !returned.contains(&full_name) && !returned.contains(ty.name.as_ref()) {
             continue;
         }
-        let name = ty.name.strip_suffix("Data").unwrap_or(&ty.name).to_owned();
+        let name = table_name(&ty.name).to_owned();
         let fields = ty
             .properties
             .iter()
@@ -114,10 +112,22 @@ pub(crate) fn read_tables(path: &Utf8Path) -> Result<Vec<Table>> {
     Ok(tables)
 }
 
+fn table_name(name: &str) -> &str {
+    // Generated table row types use either the Base or Data suffix.
+    name.strip_suffix("Base")
+        .or_else(|| name.strip_suffix("Data"))
+        .unwrap_or(name)
+}
+
 fn classify(name: &str) -> FieldKind {
     let name = name
         .trim_start_matches("ref ")
         .trim_start_matches("valuetype ");
+    // dotnetdll qualifies external value types as [Assembly]Namespace.Type.
+    let name = name
+        .strip_prefix('[')
+        .and_then(|name| name.split_once(']'))
+        .map_or(name, |(_, name)| name);
     match name {
         "System.Int32" | "int" => FieldKind::I32,
         "System.Int64" | "long" => FieldKind::I64,
@@ -149,6 +159,12 @@ mod tests {
     #[test]
     fn maps_known_types() {
         assert!(matches!(classify("System.Int32"), FieldKind::I32));
+        assert!(matches!(
+            classify("valuetype [UnityEngine.CoreModule]UnityEngine.Vector3"),
+            FieldKind::Vector3
+        ));
         assert_eq!(FieldKind::Vector3.inline_size(), 12);
+        assert_eq!(table_name("AvatarShowTableBase"), "AvatarShowTable");
+        assert_eq!(table_name("LegacyTableData"), "LegacyTable");
     }
 }

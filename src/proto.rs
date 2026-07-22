@@ -1,6 +1,3 @@
-// Copyright 2025 PotRooms
-// SPDX-License-Identifier: GPL-3.0-only
-
 use std::{collections::BTreeSet, fmt::Write as _, fs};
 
 use anyhow::{Context, Result, bail};

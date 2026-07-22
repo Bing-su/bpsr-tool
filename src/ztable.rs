@@ -1,6 +1,3 @@
-// Copyright 2025 PotRooms
-// SPDX-License-Identifier: GPL-3.0-only
-
 use std::collections::{BTreeMap, HashMap};
 
 use anyhow::{Context, Result, bail};

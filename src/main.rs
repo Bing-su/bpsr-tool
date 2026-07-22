@@ -1,7 +1,3 @@
-// Copyright 2025 PotRooms
-// Copyright 2026 bpsr-tool contributors
-// SPDX-License-Identifier: GPL-3.0-only
-
 mod metadata;
 mod pkg;
 mod proto;
@@ -11,8 +7,24 @@ use std::fs;
 
 use anyhow::{Context, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use pkg::Package;
+
+#[derive(Clone, Debug, ValueEnum)]
+#[value(rename_all = "lower")]
+enum Language {
+    English,
+    Chinese,
+    Japanese,
+    TraditionalChinese,
+    Korean,
+    Thai,
+    Indonesian,
+    German,
+    French,
+    Spanish,
+    Portuguese,
+}
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -34,7 +46,7 @@ struct Args {
     asset_bundles: bool,
     /// Localization file name without the .bytes suffix.
     #[arg(long, default_value = "english")]
-    language: String,
+    language: Language,
 }
 
 fn main() {
@@ -57,8 +69,9 @@ fn run(args: Args) -> Result<()> {
     }
 
     let package = Package::open(&args.pkg)?;
+    let language = args.language.to_possible_value().unwrap();
     let localization = package
-        .read_by_key(hash33(&format!("{}.bytes", args.language)))
+        .read_by_key(hash33(&format!("{}.bytes", language.get_name())))
         .context("failed to read localization entry")?
         .context("localization entry is missing")?;
     let localization = ztable::Localization::parse(&localization)?;
@@ -114,10 +127,21 @@ pub(crate) fn hash33(value: &str) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::hash33;
+    use super::{Language, ValueEnum, hash33};
 
     #[test]
     fn hash_matches_original() {
         assert_eq!(hash33("AvatarShowTable.ctb"), 3_524_225_204);
+    }
+
+    #[test]
+    fn language_name_preserves_package_stem() {
+        assert_eq!(
+            Language::TraditionalChinese
+                .to_possible_value()
+                .unwrap()
+                .get_name(),
+            "traditionalchinese"
+        );
     }
 }
