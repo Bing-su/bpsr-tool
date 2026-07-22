@@ -1,3 +1,4 @@
+mod il2cpp;
 mod metadata;
 mod pkg;
 mod proto;
@@ -32,9 +33,9 @@ struct Args {
     /// Path to meta.pkg.
     #[arg(long, short = 'p')]
     pkg: Utf8PathBuf,
-    /// Directory containing Panda.Table.dll.
+    /// Existing DummyDll directory (skips automatic generation).
     #[arg(long, short = 'd')]
-    dll: Utf8PathBuf,
+    dll: Option<Utf8PathBuf>,
     /// Output directory.
     #[arg(long, short = 'o')]
     output: Utf8PathBuf,
@@ -60,10 +61,7 @@ fn run(args: Args) -> Result<()> {
     if !args.pkg.is_file() {
         bail!("PKG file not found: {}", args.pkg);
     }
-    let dll = args.dll.join("Panda.Table.dll");
-    if !dll.is_file() {
-        bail!("Panda.Table.dll not found in {}", args.dll);
-    }
+    let dll = il2cpp::resolve(&args.pkg, args.dll.as_deref())?;
     for dir in ["ZTable", "Proto", "Bundles", "Lua", "Unk"] {
         fs::create_dir_all(args.output.join(dir))?;
     }
@@ -75,7 +73,7 @@ fn run(args: Args) -> Result<()> {
         .context("failed to read localization entry")?
         .context("localization entry is missing")?;
     let localization = ztable::Localization::parse(&localization)?;
-    let tables = metadata::read_tables(&dll)?;
+    let tables = metadata::read_tables(dll.path())?;
 
     for table in tables {
         let key = hash33(&format!("{}.ctb", table.name));
