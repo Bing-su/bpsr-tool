@@ -30,14 +30,17 @@ enum Language {
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    /// Path to meta.pkg.
+    /// Game metadata package at <game>/*_Data/StreamingAssets/container/meta.pkg.
+    ///
+    /// Without --dll, its location is used to find <game>/GameAssembly.dll and
+    /// <game>/*_Data/il2cpp_data/Metadata/global-metadata.dat.
     #[arg(long, short = 'p')]
     pkg: Utf8PathBuf,
     /// Existing DummyDll directory (skips automatic generation).
     #[arg(long, short = 'd')]
     dll: Option<Utf8PathBuf>,
     /// Output directory.
-    #[arg(long, short = 'o')]
+    #[arg(long, short = 'o', default_value = "extracted")]
     output: Utf8PathBuf,
     /// Extract every package entry.
     #[arg(long)]
