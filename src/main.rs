@@ -9,7 +9,9 @@ use std::fs;
 use anyhow::{Context, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, ValueEnum};
+use indicatif::{ProgressBar, ProgressStyle};
 use pkg::Package;
+use rayon::prelude::*;
 
 #[derive(Clone, Debug, ValueEnum)]
 #[value(rename_all = "lower")]
@@ -78,11 +80,19 @@ fn run(args: Args) -> Result<()> {
     let localization = ztable::Localization::parse(&localization)?;
     let tables = metadata::read_tables(dll.path())?;
 
-    for table in tables {
+    let progress = ProgressBar::new(tables.len() as u64);
+    progress.set_style(
+        ProgressStyle::with_template(
+            "Extracting ZTables [{bar:40.cyan/blue}] {pos}/{len} ({elapsed_precise})",
+        )?
+        .progress_chars("=>-"),
+    );
+    let result: Result<()> = tables.into_par_iter().try_for_each(|table| {
         let key = hash33(&format!("{}.ctb", table.name));
         let Some(data) = package.read_by_key(key)? else {
-            eprintln!("warning: table {} ({key}) is missing", table.name);
-            continue;
+            progress.println(format!("warning: table {} ({key}) is missing", table.name));
+            progress.inc(1);
+            return Ok(());
         };
         let value = ztable::parse(&data, &table.fields, &localization)
             .with_context(|| format!("failed to parse table {}", table.name))?;
@@ -91,7 +101,11 @@ fn run(args: Args) -> Result<()> {
             .join("ZTable")
             .join(format!("{}.json", table.name));
         fs::write(path, serde_json::to_vec_pretty(&value)?)?;
-    }
+        progress.inc(1);
+        Ok(())
+    });
+    progress.finish_and_clear();
+    result?;
 
     if args.all {
         extract_all(&package, &args.output, args.asset_bundles)?;
