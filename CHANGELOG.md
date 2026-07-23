@@ -1,3 +1,14 @@
+## [0.1.1] - 2026-07-23
+
+### 🐛 Bug Fixes
+
+- Improve CLI help text.
+- Extract package entries in parallel
+
+### ⚙️ Miscellaneous Tasks
+
+- Refactor release actions
+
 ## [0.1.0] - 2026-07-23
 
 ### 🚀 Features
