@@ -29,32 +29,38 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
 
       - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v1
-        with:
-          command: build
-          target: ${{ matrix.target }}
-          args: "--locked --release"
-          strip: true
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: Archive binary
+        run: 7z a bpsr-tool-${{ matrix.target }}.zip target/${{ matrix.target }}/release/bpsr-tool${{ case(runner.os == 'Windows', '.exe', '') }}
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
-          subject-path: |
-            target/${{ matrix.target }}/release/bpsr-tool
-            target/${{ matrix.target }}/release/bpsr-tool.exe
+          subject-path: bpsr-tool-*.zip
 
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.os }}-${{ matrix.target }}-${{ strategy.job-index }}
-          path: ${{ case(runner.os == 'Windows', format('target/{0}/release/bpsr-tool.exe', matrix.target), format('target/{0}/release/bpsr-tool', matrix.target)) }}
-          if-no-files-found: warn
+          path: bpsr-tool-${{ matrix.target }}.zip
+          if-no-files-found: error
+
+      - uses: orhun/git-cliff-action@v4
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: cliff
+        with:
+          args: -vv --latest --strip header
 
       - name: Publish artifacts and release
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: houseabsolute/actions-rust-release@v0
+        uses: softprops/action-gh-release@v3
         with:
-          executable-name: "bpsr-tool"
-          target: ${{ matrix.target }}
-          changes-file: "CHANGELOG.md"
+          files: bpsr-tool-*.zip
+          body: ${{ steps.cliff.outputs.content }}
