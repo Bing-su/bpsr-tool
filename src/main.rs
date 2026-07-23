@@ -133,7 +133,7 @@ fn run(args: Args) -> Result<()> {
 }
 
 fn extract_all(package: &Package, output: &Utf8Path, bundles: bool) -> Result<()> {
-    for (&key, entry) in package.entries() {
+    package.entries().par_iter().try_for_each(|(&key, entry)| {
         let data = package.read(entry)?;
         if data.starts_with(b"UnityFS") {
             if bundles {
@@ -149,8 +149,8 @@ fn extract_all(package: &Package, output: &Utf8Path, bundles: bool) -> Result<()
             }
             fs::write(output.join("Unk").join(format!("{key}.bin")), data)?;
         }
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 pub(crate) fn hash33(value: &str) -> u32 {
