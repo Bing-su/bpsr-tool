@@ -30,28 +30,47 @@ enum Language {
 }
 
 #[derive(Parser, Debug)]
-#[command(version, about)]
+#[command(
+    version,
+    about = "Extract Blue Protocol: Star Resonance game data from meta.pkg",
+    long_about = "Extract localized ZTables and, optionally, every package entry from Blue Protocol: Star Resonance's meta.pkg.\n\nBy default, the tool finds the game's IL2CPP files relative to meta.pkg and writes localized ZTable JSON files to <output>."
+)]
 struct Args {
-    /// Game metadata package at <game>/*_Data/StreamingAssets/container/meta.pkg.
+    /// Path to the game's meta.pkg file.
     ///
-    /// Without --dll, its location is used to find <game>/GameAssembly.dll and
+    /// Usually located at:
+    /// <game>/*_Data/StreamingAssets/container/meta.pkg
+    ///
+    /// Unless --dll is provided, this path is also used to locate
+    /// <game>/GameAssembly.dll and
     /// <game>/*_Data/il2cpp_data/Metadata/global-metadata.dat.
     #[arg(long, short = 'p')]
     pkg: Utf8PathBuf,
-    /// Existing DummyDll directory (skips automatic generation).
+    /// Path to an existing DummyDll directory containing Panda.Table.dll.
+    ///
+    /// Use this to skip automatic DLL generation from the game's IL2CPP files.
     #[arg(long, short = 'd')]
     dll: Option<Utf8PathBuf>,
-    /// Output directory.
+    /// Directory where extracted files are written.
+    ///
+    /// Existing files with the same names are overwritten.
     #[arg(long, short = 'o', default_value = "extracted")]
     output: Utf8PathBuf,
-    /// Extract every package entry.
+    /// Extract all package entries in addition to localized ZTables.
+    ///
+    /// Lua files, protobuf descriptors, and unknown entries are written to
+    /// separate subdirectories. UnityFS bundles still require --asset-bundles.
     #[arg(long)]
     all: bool,
-    /// Include UnityFS asset bundles (requires --all).
+    /// Include UnityFS asset bundles when extracting all entries.
+    ///
+    /// Requires --all. Bundles are written to the Bundles subdirectory.
     #[arg(long, requires = "all")]
     asset_bundles: bool,
-    /// Localization file name without the .bytes suffix.
-    #[arg(long, default_value = "english")]
+    /// Language used to localize extracted ZTables.
+    ///
+    /// The value selects the matching <language>.bytes entry in meta.pkg.
+    #[arg(short = 'l', long, default_value = "english")]
     language: Language,
 }
 
