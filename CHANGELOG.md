@@ -12,3 +12,7 @@
 
 - Add hk configuration
 - Add release workflow, git cliff config
+- Attest and upload release artifacts
+- Add lint workflow and Dependabot updates
+- Configure oxfmt to format only json, yaml, markdown
+- V0.1.0
