@@ -1,0 +1,14 @@
+## [0.1.0] - 2026-07-23
+
+### 🚀 Features
+
+- Initial implementation
+- Add localization language support and robust metadata handling
+- Integrate automatic Panda.Table.dll generation via embedded Il2CppInspectorRedux and adjust metadata flow
+- Set default output to extracted and enhance pkg arg help text
+- Parallelize ZTable extraction with progress reporting
+
+### ⚙️ Miscellaneous Tasks
+
+- Add hk configuration
+- Add release workflow, git cliff config
