@@ -1,3 +1,14 @@
+## [0.1.2] - 2026-07-23
+
+### 🐛 Bug Fixes
+
+- Create only the requested extraction directories
+
+### ⚙️ Miscellaneous Tasks
+
+- Build Linux releases against musl
+- V0.1.2
+
 ## [0.1.1] - 2026-07-23
 
 ### 🐛 Bug Fixes
@@ -8,6 +19,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Refactor release actions
+- V0.1.1
 
 ## [0.1.0] - 2026-07-23
 
