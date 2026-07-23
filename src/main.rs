@@ -81,12 +81,20 @@ fn main() {
     }
 }
 
+fn output_dirs(all: bool, bundles: bool) -> &'static [&'static str] {
+    match (all, bundles) {
+        (_, true) => &["ZTable", "Proto", "Lua", "Unk", "Bundles"],
+        (true, false) => &["ZTable", "Proto", "Lua", "Unk"],
+        (false, false) => &["ZTable"],
+    }
+}
+
 fn run(args: Args) -> Result<()> {
     if !args.pkg.is_file() {
         bail!("PKG file not found: {}", args.pkg);
     }
     let dll = il2cpp::resolve(&args.pkg, args.dll.as_deref())?;
-    for dir in ["ZTable", "Proto", "Bundles", "Lua", "Unk"] {
+    for dir in output_dirs(args.all, args.asset_bundles) {
         fs::create_dir_all(args.output.join(dir))?;
     }
 
@@ -161,7 +169,7 @@ pub(crate) fn hash33(value: &str) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Language, ValueEnum, hash33};
+    use super::*;
 
     #[test]
     fn hash_matches_original() {
@@ -176,6 +184,16 @@ mod tests {
                 .unwrap()
                 .get_name(),
             "traditionalchinese"
+        );
+    }
+
+    #[test]
+    fn output_directories_follow_extraction_options() {
+        assert_eq!(output_dirs(false, false), ["ZTable"]);
+        assert_eq!(output_dirs(true, false), ["ZTable", "Proto", "Lua", "Unk"]);
+        assert_eq!(
+            output_dirs(true, true),
+            ["ZTable", "Proto", "Lua", "Unk", "Bundles"]
         );
     }
 }
