@@ -6,7 +6,9 @@ local linters = new Mapping<String, Step> {
     ["mixed-line-ending"] = Builtins.mixed_line_ending
     ["newlines"] = Builtins.newlines
 
-    ["oxfmt"] = Builtins.oxfmt
+    ["oxfmt"] = (Builtins.oxfmt) {
+        types = List("json", "yaml", "markdown")
+    }
     ["tombi-format"] = (Builtins.tombi_format) {
         exclude = List("*.lock")
     }
