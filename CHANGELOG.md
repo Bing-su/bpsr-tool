@@ -1,3 +1,13 @@
+## [0.1.3] - 2026-07-24
+
+### 🐛 Bug Fixes
+
+- Archive release binaries from their target directory
+
+### ⚙️ Miscellaneous Tasks
+
+- V0.1.3
+
 ## [0.1.2] - 2026-07-23
 
 ### 🐛 Bug Fixes
