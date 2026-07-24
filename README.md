@@ -1,23 +1,37 @@
 # bpsr-tool
 
-Rust data extractor for **Blue Protocol: Star Resonance**. It reads the game's
-PKG containers, reconstructs ZTables from `Panda.Table.dll`, dumps protobuf
-descriptors, and extracts Lua, UnityFS, and unknown assets.
+Rust data extractor for **Blue Protocol: Star Resonance**.
 
-```text
+It can:
+
+- reconstruct localized ZTables from `Panda.Table.dll`
+- dump protobuf descriptors
+- extract Lua, UnityFS, and unknown assets from PKG containers
+
+## Usage
+
+```bash
 bpsr-tool --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--all] [--asset-bundles] [--language english]
 ```
 
-Without `--all`, only localized ZTable JSON files are produced. `--all` also
-extracts package entries; add `--asset-bundles` to include UnityFS bundles.
+| Option             | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| `--pkg`, `-p`      | Path to `meta.pkg`                                           |
+| `--output`, `-o`   | Output directory (default: `extracted`)                      |
+| `--dll`, `-d`      | Existing `DummyDll` directory containing `Panda.Table.dll`   |
+| `--all`            | Extract all package entries in addition to localized ZTables |
+| `--asset-bundles`  | Include UnityFS bundles; requires `--all`                    |
+| `--language`, `-l` | ZTable language (default: `english`)                         |
 
-When `--dll` is omitted, the tool locates `GameAssembly.dll` and
-`global-metadata.dat` from the standard game layout relative to `meta.pkg`,
-then generates a temporary `Panda.Table.dll` with the embedded
-Il2CppInspectorRedux. Automatic generation supports Windows x64, Linux
-x64/ARM64, and macOS x64/ARM64. Pass an existing dummy DLL directory with
-`--dll` to skip this step. The bundled CLI requires the ASP.NET Core 10
-Runtime. The game installation is not modified.
+By default, only localized ZTable JSON files are produced. Use `--all` to
+extract the remaining package entries, and add `--asset-bundles` to include
+UnityFS bundles.
+
+## DLL generation
+
+When `--dll` is omitted, the tool finds `GameAssembly.dll` and
+`global-metadata.dat` relative to `meta.pkg`, then uses the embedded
+Il2CppInspectorRedux to generate a temporary `Panda.Table.dll`.
 
 ```text
 <game>/GameAssembly.dll
@@ -25,11 +39,24 @@ Runtime. The game installation is not modified.
 <game>/*_Data/StreamingAssets/container/meta.pkg
 ```
 
-The embedded [Il2CppInspectorRedux 2026.2](https://github.com/LukeFZ/Il2CppInspectorRedux)
-is distributed under the AGPL-3.0 License; see
-`asset/Il2CppInspectorRedux-NOTICE` and
-`asset/Il2CppInspectorRedux-LICENSE`.
+Automatic generation supports:
+
+- Windows x64
+- Linux x64 and ARM64
+- macOS x64 and ARM64
+
+The bundled CLI requires the ASP.NET Core 10 Runtime. To skip automatic
+generation, pass an existing dummy DLL directory with `--dll`. The game
+installation is not modified.
+
+## License
 
 This is a GPL-3.0 Rust rewrite of
 [PotRooms/StarResonanceTool](https://github.com/PotRooms/StarResonanceTool).
 Real game files are not included.
+
+The embedded
+[Il2CppInspectorRedux 2026.2](https://github.com/LukeFZ/Il2CppInspectorRedux)
+is distributed under the AGPL-3.0 License. See
+`asset/Il2CppInspectorRedux-NOTICE` and
+`asset/Il2CppInspectorRedux-LICENSE`.
