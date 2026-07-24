@@ -44,7 +44,8 @@ jobs:
         run: cargo build --locked --release --target ${{ matrix.target }}
 
       - name: Archive binary
-        run: 7z a bpsr-tool-${{ matrix.target }}.zip target/${{ matrix.target }}/release/bpsr-tool${{ case(runner.os == 'Windows', '.exe', '') }}
+        run: 7z a ${{ github.workspace }}/bpsr-tool-${{ matrix.target }}.zip bpsr-tool${{ case(runner.os == 'Windows', '.exe', '') }}
+        working-directory: target/${{ matrix.target }}/release
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
