@@ -17,33 +17,33 @@ use std::{
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 const INSPECTOR: (&[u8], &str, &str) = (
-    include_bytes!("../asset/Il2CppInspectorRedux.CLI-win-x64.zip"),
-    "Il2CppInspectorRedux.CLI-win-x64/Il2CppInspector.Redux.CLI.exe",
-    "Il2CppInspector.Redux.CLI.exe",
+    include_bytes!("../asset/Il2CppInspectorRedux.Legacy.CLI-win-x64.zip"),
+    "Il2CppInspectorRedux.Legacy.CLI-win-x64/Il2CppInspector.exe",
+    "Il2CppInspector.exe",
 );
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 const INSPECTOR: (&[u8], &str, &str) = (
-    include_bytes!("../asset/Il2CppInspectorRedux.CLI-linux-x64.zip"),
-    "Il2CppInspectorRedux.CLI-linux-x64/Il2CppInspector.Redux.CLI",
-    "Il2CppInspector.Redux.CLI",
+    include_bytes!("../asset/Il2CppInspectorRedux.Legacy.CLI-linux-x64.zip"),
+    "Il2CppInspectorRedux.Legacy.CLI-linux-x64/Il2CppInspector",
+    "Il2CppInspector",
 );
 #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
 const INSPECTOR: (&[u8], &str, &str) = (
-    include_bytes!("../asset/Il2CppInspectorRedux.CLI-linux-arm64.zip"),
-    "Il2CppInspectorRedux.CLI-linux-arm64/Il2CppInspector.Redux.CLI",
-    "Il2CppInspector.Redux.CLI",
+    include_bytes!("../asset/Il2CppInspectorRedux.Legacy.CLI-linux-arm64.zip"),
+    "Il2CppInspectorRedux.Legacy.CLI-linux-arm64/Il2CppInspector",
+    "Il2CppInspector",
 );
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 const INSPECTOR: (&[u8], &str, &str) = (
-    include_bytes!("../asset/Il2CppInspectorRedux.CLI-osx-x64.zip"),
-    "Il2CppInspectorRedux.CLI-osx-x64/Il2CppInspector.Redux.CLI",
-    "Il2CppInspector.Redux.CLI",
+    include_bytes!("../asset/Il2CppInspectorRedux.Legacy.CLI-osx-x64.zip"),
+    "Il2CppInspectorRedux.Legacy.CLI-osx-x64/Il2CppInspector",
+    "Il2CppInspector",
 );
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 const INSPECTOR: (&[u8], &str, &str) = (
-    include_bytes!("../asset/Il2CppInspectorRedux.CLI-osx-arm64.zip"),
-    "Il2CppInspectorRedux.CLI-osx-arm64/Il2CppInspector.Redux.CLI",
-    "Il2CppInspector.Redux.CLI",
+    include_bytes!("../asset/Il2CppInspectorRedux.Legacy.CLI-osx-arm64.zip"),
+    "Il2CppInspectorRedux.Legacy.CLI-osx-arm64/Il2CppInspector",
+    "Il2CppInspector",
 );
 
 pub(crate) struct Dll {
@@ -98,14 +98,16 @@ fn generate(pkg: &Utf8Path) -> Result<Dll> {
     }
 
     let (temp, executable, output) = prepare_inspector()?;
+    let dll_output = output.join("dll");
     let status = Command::new(&executable)
         .args([
-            "process",
-            metadata.as_str(),
+            "-i",
             game_assembly.as_str(),
-            "-o",
-            output.as_str(),
-            "--output-dummy-dlls",
+            "-m",
+            metadata.as_str(),
+            "--select-outputs",
+            "--dll-out",
+            dll_output.as_str(),
         ])
         .current_dir(
             executable

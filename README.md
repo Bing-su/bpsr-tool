@@ -31,7 +31,7 @@ UnityFS bundles.
 
 When `--dll` is omitted, the tool finds `GameAssembly.dll` and
 `global-metadata.dat` relative to `meta.pkg`, then uses the embedded
-Il2CppInspectorRedux to generate a temporary `Panda.Table.dll`.
+Il2CppInspectorRedux Legacy CLI to generate a temporary `Panda.Table.dll`.
 
 ```text
 <game>/GameAssembly.dll
@@ -45,7 +45,7 @@ Automatic generation supports:
 - Linux x64 and ARM64
 - macOS x64 and ARM64
 
-The bundled CLI requires the ASP.NET Core 10 Runtime. To skip automatic
+The bundled CLI requires the .NET 10 Runtime. To skip automatic
 generation, pass an existing dummy DLL directory with `--dll`. The game
 installation is not modified.
 
