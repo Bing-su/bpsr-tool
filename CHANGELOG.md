@@ -1,3 +1,22 @@
+## [0.2.0] - 2026-07-29
+
+### 🚀 Features
+
+- Add archive game file script
+- Logging
+
+### 🐛 Bug Fixes
+
+- Use IL2CppInspectorRedux Legacy CLI
+
+### 📚 Documentation
+
+- Expand README usage and DLL generation guidance
+
+### ⚙️ Miscellaneous Tasks
+
+- V0.2.0
+
 ## [0.1.3] - 2026-07-24
 
 ### 🐛 Bug Fixes
