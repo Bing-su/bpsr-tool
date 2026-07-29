@@ -12,6 +12,8 @@ use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
 use pkg::Package;
 use rayon::prelude::*;
+use tracing::{debug, info, warn};
+use tracing_subscriber::EnvFilter;
 
 #[derive(Clone, Debug, ValueEnum)]
 #[value(rename_all = "lower")]
@@ -75,6 +77,13 @@ struct Args {
 }
 
 fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .with_target(false)
+        .init();
+
     if let Err(error) = run(Args::parse()) {
         eprintln!("error: {error:#}");
         std::process::exit(1);
@@ -90,16 +99,32 @@ fn output_dirs(all: bool, bundles: bool) -> &'static [&'static str] {
 }
 
 fn run(args: Args) -> Result<()> {
+    info!(
+        pkg = %args.pkg,
+        output = %args.output,
+        language = ?args.language,
+        all = args.all,
+        asset_bundles = args.asset_bundles,
+        "starting extraction"
+    );
     if !args.pkg.is_file() {
         bail!("PKG file not found: {}", args.pkg);
     }
+
+    info!("resolving Panda.Table.dll");
     let dll = il2cpp::resolve(&args.pkg, args.dll.as_deref())?;
-    for dir in output_dirs(args.all, args.asset_bundles) {
+    info!(path = %dll.path(), "Panda.Table.dll ready");
+
+    let output_dirs = output_dirs(args.all, args.asset_bundles);
+    debug!(?output_dirs, "creating output directories");
+    for dir in output_dirs {
         fs::create_dir_all(args.output.join(dir))?;
     }
 
+    info!("loading package index");
     let package = Package::open(&args.pkg)?;
     let language = args.language.to_possible_value().unwrap();
+    info!(language = language.get_name(), "loading localization");
     let localization = package
         .read_by_key(hash33(&format!("{}.bytes", language.get_name())))
         .context("failed to read localization entry")?
@@ -107,6 +132,7 @@ fn run(args: Args) -> Result<()> {
     let localization = ztable::Localization::parse(&localization)?;
     let tables = metadata::read_tables(dll.path())?;
 
+    info!(tables = tables.len(), "extracting localized ZTables");
     let progress = ProgressBar::new(tables.len() as u64);
     progress.set_style(
         ProgressStyle::with_template(
@@ -131,12 +157,20 @@ fn run(args: Args) -> Result<()> {
         progress.inc(1);
         Ok(())
     });
-    progress.finish_and_clear();
+    progress.finish();
     result?;
+    info!("localized ZTable extraction complete");
 
     if args.all {
+        info!(
+            entries = package.entries().len(),
+            asset_bundles = args.asset_bundles,
+            "extracting package entries"
+        );
         extract_all(&package, &args.output, args.asset_bundles)?;
+        info!("package entry extraction complete");
     }
+    info!("extraction complete");
     Ok(())
 }
 
@@ -153,7 +187,7 @@ fn extract_all(package: &Package, output: &Utf8Path, bundles: bool) -> Result<()
             if data.windows(6).any(|w| w == b"proto2" || w == b"proto3")
                 && let Err(error) = proto::dump(&data, &output.join("Proto"))
             {
-                eprintln!("warning: invalid descriptor entry {key}: {error:#}");
+                warn!(key, error = %format!("{error:#}"), "invalid descriptor entry");
             }
             fs::write(output.join("Unk").join(format!("{key}.bin")), data)?;
         }

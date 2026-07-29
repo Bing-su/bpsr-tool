@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
 use tempfile::TempDir;
+use tracing::{debug, info};
 
 #[cfg(any(
     all(target_os = "windows", target_arch = "x86_64"),
@@ -63,6 +64,7 @@ pub(crate) fn resolve(pkg: &Utf8Path, directory: Option<&Utf8Path>) -> Result<Dl
         if !path.is_file() {
             bail!("Panda.Table.dll not found in {directory}");
         }
+        info!(path = %path, "using provided dummy DLL");
         return Ok(Dll { path, _temp: None });
     }
     generate(pkg)
@@ -99,6 +101,11 @@ fn generate(pkg: &Utf8Path) -> Result<Dll> {
 
     let (temp, executable, output) = prepare_inspector()?;
     let dll_output = output.join("dll");
+    info!(
+        binary = %game_assembly,
+        metadata = %metadata,
+        "generating dummy DLLs with Il2CppInspectorRedux Legacy CLI"
+    );
     let status = Command::new(&executable)
         .args([
             "-i",
@@ -118,6 +125,7 @@ fn generate(pkg: &Utf8Path) -> Result<Dll> {
         .with_context(|| {
             format!("failed to start embedded Il2CppInspectorRedux at {executable}")
         })?;
+    info!(%status, "Il2CppInspectorRedux finished");
     let path = validate_inspector_output(status, &output)?;
 
     Ok(Dll {
@@ -177,6 +185,7 @@ fn prepare_inspector() -> Result<(TempDir, Utf8PathBuf, Utf8PathBuf)> {
         .context("Il2CppInspectorRedux temporary path is not valid UTF-8")?;
     let tool = root.join("tool");
     let output = root.join("output");
+    debug!(path = %root, "preparing embedded Il2CppInspectorRedux");
     fs::create_dir_all(&tool)?;
     fs::create_dir_all(&output)?;
 
