@@ -8,7 +8,7 @@ use std::fs;
 
 use anyhow::{Context, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
 use pkg::Package;
 use rayon::prelude::*;
@@ -32,12 +32,22 @@ enum Language {
 }
 
 #[derive(Parser, Debug)]
-#[command(
-    version,
-    about = "Extract Blue Protocol: Star Resonance game data from meta.pkg",
-    long_about = "Extract localized ZTables and, optionally, every package entry from Blue Protocol: Star Resonance's meta.pkg.\n\nBy default, the tool finds the game's IL2CPP files relative to meta.pkg and writes localized ZTable JSON files to <output>."
-)]
+#[command(version, about = "Extract Blue Protocol: Star Resonance game data")]
 struct Args {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Extract localized ZTables and package entries from meta.pkg.
+    Extract(ExtractArgs),
+    /// Generate Panda.Table.dll with the embedded Il2CppInspectorRedux.
+    Il2cpp(Il2cppArgs),
+}
+
+#[derive(clap::Args, Debug)]
+struct ExtractArgs {
     /// Path to the game's meta.pkg file.
     ///
     /// Usually located at:
@@ -76,6 +86,21 @@ struct Args {
     language: Language,
 }
 
+#[derive(clap::Args, Debug)]
+struct Il2cppArgs {
+    /// Path to the game's meta.pkg file.
+    ///
+    /// Used to locate <game>/GameAssembly.dll and
+    /// <game>/*_Data/il2cpp_data/Metadata/global-metadata.dat.
+    #[arg(long, short = 'p')]
+    pkg: Utf8PathBuf,
+    /// Directory where Panda.Table.dll is written.
+    ///
+    /// An existing Panda.Table.dll is overwritten.
+    #[arg(long, short = 'o')]
+    output: Utf8PathBuf,
+}
+
 fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -84,7 +109,7 @@ fn main() {
         .with_target(false)
         .init();
 
-    if let Err(error) = run(Args::parse()) {
+    if let Err(error) = run(Args::parse().command) {
         eprintln!("error: {error:#}");
         std::process::exit(1);
     }
@@ -98,7 +123,24 @@ fn output_dirs(all: bool, bundles: bool) -> &'static [&'static str] {
     }
 }
 
-fn run(args: Args) -> Result<()> {
+fn run(command: Command) -> Result<()> {
+    match command {
+        Command::Extract(args) => extract(args),
+        Command::Il2cpp(args) => generate_dll(args),
+    }
+}
+
+fn generate_dll(args: Il2cppArgs) -> Result<()> {
+    let dll = il2cpp::resolve(&args.pkg, None)?;
+    fs::create_dir_all(&args.output)?;
+    let output = args.output.join("Panda.Table.dll");
+    fs::copy(dll.path(), &output)
+        .with_context(|| format!("failed to write Panda.Table.dll to {output}"))?;
+    info!(path = %output, "Panda.Table.dll written");
+    Ok(())
+}
+
+fn extract(args: ExtractArgs) -> Result<()> {
     info!(
         pkg = %args.pkg,
         output = %args.output,
@@ -229,5 +271,21 @@ mod tests {
             output_dirs(true, true),
             ["ZTable", "Proto", "Lua", "Unk", "Bundles"]
         );
+    }
+
+    #[test]
+    fn parses_subcommands() {
+        assert!(matches!(
+            Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg"])
+                .unwrap()
+                .command,
+            Command::Extract(_)
+        ));
+        assert!(matches!(
+            Args::try_parse_from(["bpsr-tool", "il2cpp", "-p", "meta.pkg", "-o", "DummyDll"])
+                .unwrap()
+                .command,
+            Command::Il2cpp(_)
+        ));
     }
 }

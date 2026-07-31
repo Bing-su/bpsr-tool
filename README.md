@@ -11,7 +11,7 @@ It can:
 ## Usage
 
 ```bash
-bpsr-tool --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--all] [--asset-bundles] [--language english]
+bpsr-tool extract --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--all] [--asset-bundles] [--language english]
 ```
 
 | Option             | Description                                                  |
@@ -48,6 +48,13 @@ Automatic generation supports:
 The bundled CLI requires the .NET 10 Runtime. To skip automatic
 generation, pass an existing dummy DLL directory with `--dll`. The game
 installation is not modified.
+
+To keep the generated DLL, write it to a directory with the `il2cpp`
+subcommand:
+
+```bash
+bpsr-tool il2cpp --pkg <meta.pkg> --output <DummyDll>
+```
 
 ## License
 

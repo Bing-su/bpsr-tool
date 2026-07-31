@@ -165,7 +165,7 @@ fn validate_inspector_output(
 )))]
 fn generate(_pkg: &Utf8Path) -> Result<Dll> {
     bail!(
-        "automatic Panda.Table.dll generation is unavailable for {}/{}; use --dll",
+        "embedded Il2CppInspectorRedux is unavailable for platform {}/{}",
         std::env::consts::OS,
         std::env::consts::ARCH
     )
