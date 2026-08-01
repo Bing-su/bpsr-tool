@@ -1,3 +1,13 @@
+## [0.3.0] - 2026-08-01
+
+### 🚀 Features
+
+- [**breaking**] Add subcommands for extraction and IL2CPP DLL generation
+
+### ⚙️ Miscellaneous Tasks
+
+- V0.3.0
+
 ## [0.2.0] - 2026-07-29
 
 ### 🚀 Features
