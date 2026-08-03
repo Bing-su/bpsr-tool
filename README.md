@@ -26,11 +26,11 @@ bpsr-tool extract --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--al
 
 ### ZTable output formats
 
-| Value         | Extension | Structure                                     |
-| ------------- | --------- | --------------------------------------------- |
-| `json-pretty` | `.json`   | Pretty-printed object keyed by table row      |
-| `json`        | `.json`   | Compact object keyed by table row             |
-| `ndjson`      | `.ndjson` | One object per line with a string `Key` field |
+| Value         | Extension | Structure                                |
+| ------------- | --------- | ---------------------------------------- |
+| `json-pretty` | `.json`   | Pretty-printed object keyed by table row |
+| `json`        | `.json`   | Compact object keyed by table row        |
+| `ndjson`      | `.ndjson` | One table row object per line            |
 
 Use `--all` to extract the remaining package entries, and add
 `--asset-bundles` to include UnityFS bundles.

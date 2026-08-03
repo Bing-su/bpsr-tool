@@ -243,13 +243,15 @@ fn serialize_ztable(value: &serde_json::Value, format: ZtableFormat) -> Result<V
         ZtableFormat::Json => Ok(serde_json::to_vec(value)?),
         ZtableFormat::Ndjson => {
             let mut output = Vec::new();
-            for (key, value) in value.as_object().context("ZTable is not an object")? {
-                let mut row = value
-                    .as_object()
-                    .context("ZTable row is not an object")?
-                    .clone();
-                row.insert("Key".into(), serde_json::Value::String(key.clone()));
-                serde_json::to_writer(&mut output, &row)?;
+            for row in value
+                .as_object()
+                .context("ZTable is not an object")?
+                .values()
+            {
+                serde_json::to_writer(
+                    &mut output,
+                    row.as_object().context("ZTable row is not an object")?,
+                )?;
                 output.push(b'\n');
             }
             Ok(output)
@@ -357,8 +359,8 @@ mod tests {
     #[test]
     fn serializes_ztable_formats() {
         let value = serde_json::json!({
-            "42": {"Value": 7},
-            "84": {"Nested": [1, 2]}
+            "42": {"Id": 42, "Value": 7},
+            "84": {"Id": 84, "Nested": [1, 2]}
         });
         let pretty = serialize_ztable(&value, ZtableFormat::JsonPretty).unwrap();
         let compact = serialize_ztable(&value, ZtableFormat::Json).unwrap();
@@ -378,9 +380,11 @@ mod tests {
             .collect::<serde_json::Result<Vec<_>>>()
             .unwrap();
         assert_eq!(rows.len(), 2);
-        assert_eq!(rows[0]["Key"], "42");
+        assert_eq!(rows[0]["Id"], 42);
+        assert!(rows[0].get("Key").is_none());
         assert_eq!(rows[0]["Value"], 7);
-        assert_eq!(rows[1]["Key"], "84");
+        assert_eq!(rows[1]["Id"], 84);
+        assert!(rows[1].get("Key").is_none());
         assert_eq!(rows[1]["Nested"], serde_json::json!([1, 2]));
         assert_eq!(
             serialize_ztable(&serde_json::json!({}), ZtableFormat::Ndjson).unwrap(),
