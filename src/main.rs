@@ -31,6 +31,23 @@ enum Language {
     Portuguese,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+#[value(rename_all = "kebab-case")]
+enum ZtableFormat {
+    JsonPretty,
+    Json,
+    Ndjson,
+}
+
+impl ZtableFormat {
+    fn extension(self) -> &'static str {
+        match self {
+            Self::JsonPretty | Self::Json => "json",
+            Self::Ndjson => "ndjson",
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(version, about = "Extract Blue Protocol: Star Resonance game data")]
 struct Args {
@@ -84,6 +101,9 @@ struct ExtractArgs {
     /// The value selects the matching <language>.bytes entry in meta.pkg.
     #[arg(short = 'l', long, default_value = "english")]
     language: Language,
+    /// Output format for localized ZTables.
+    #[arg(long, default_value = "json-pretty")]
+    format: ZtableFormat,
 }
 
 #[derive(clap::Args, Debug)]
@@ -145,6 +165,7 @@ fn extract(args: ExtractArgs) -> Result<()> {
         pkg = %args.pkg,
         output = %args.output,
         language = ?args.language,
+        format = ?args.format,
         all = args.all,
         asset_bundles = args.asset_bundles,
         "starting extraction"
@@ -191,11 +212,11 @@ fn extract(args: ExtractArgs) -> Result<()> {
         };
         let value = ztable::parse(&data, &table.fields, &localization)
             .with_context(|| format!("failed to parse table {}", table.name))?;
-        let path = args
-            .output
-            .join("ZTable")
-            .join(format!("{}.json", table.name));
-        fs::write(path, serde_json::to_vec_pretty(&value)?)?;
+        let path =
+            args.output
+                .join("ZTable")
+                .join(format!("{}.{}", table.name, args.format.extension()));
+        fs::write(path, serialize_ztable(&value, args.format)?)?;
         progress.inc(1);
         Ok(())
     });
@@ -214,6 +235,26 @@ fn extract(args: ExtractArgs) -> Result<()> {
     }
     info!("extraction complete");
     Ok(())
+}
+
+fn serialize_ztable(value: &serde_json::Value, format: ZtableFormat) -> Result<Vec<u8>> {
+    match format {
+        ZtableFormat::JsonPretty => Ok(serde_json::to_vec_pretty(value)?),
+        ZtableFormat::Json => Ok(serde_json::to_vec(value)?),
+        ZtableFormat::Ndjson => {
+            let mut output = Vec::new();
+            for (key, value) in value.as_object().context("ZTable is not an object")? {
+                let mut row = value
+                    .as_object()
+                    .context("ZTable row is not an object")?
+                    .clone();
+                row.insert("Key".into(), serde_json::Value::String(key.clone()));
+                serde_json::to_writer(&mut output, &row)?;
+                output.push(b'\n');
+            }
+            Ok(output)
+        }
+    }
 }
 
 fn extract_all(package: &Package, output: &Utf8Path, bundles: bool) -> Result<()> {
@@ -275,17 +316,75 @@ mod tests {
 
     #[test]
     fn parses_subcommands() {
-        assert!(matches!(
+        let Command::Extract(args) =
             Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg"])
                 .unwrap()
-                .command,
-            Command::Extract(_)
-        ));
+                .command
+        else {
+            panic!("expected extract command");
+        };
+        assert_eq!(args.format, ZtableFormat::JsonPretty);
         assert!(matches!(
             Args::try_parse_from(["bpsr-tool", "il2cpp", "-p", "meta.pkg", "-o", "DummyDll"])
                 .unwrap()
                 .command,
             Command::Il2cpp(_)
         ));
+    }
+
+    #[test]
+    fn parses_ztable_formats() {
+        for (name, expected) in [
+            ("json-pretty", ZtableFormat::JsonPretty),
+            ("json", ZtableFormat::Json),
+            ("ndjson", ZtableFormat::Ndjson),
+        ] {
+            let Command::Extract(args) =
+                Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg", "--format", name])
+                    .unwrap()
+                    .command
+            else {
+                panic!("expected extract command");
+            };
+            assert_eq!(args.format, expected);
+        }
+        assert!(
+            Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg", "--format", "csv"])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn serializes_ztable_formats() {
+        let value = serde_json::json!({
+            "42": {"Value": 7},
+            "84": {"Nested": [1, 2]}
+        });
+        let pretty = serialize_ztable(&value, ZtableFormat::JsonPretty).unwrap();
+        let compact = serialize_ztable(&value, ZtableFormat::Json).unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&pretty).unwrap(),
+            serde_json::from_slice::<serde_json::Value>(&compact).unwrap()
+        );
+        assert!(String::from_utf8(pretty).unwrap().contains('\n'));
+        assert!(!String::from_utf8(compact).unwrap().contains('\n'));
+
+        let ndjson =
+            String::from_utf8(serialize_ztable(&value, ZtableFormat::Ndjson).unwrap()).unwrap();
+        assert!(ndjson.ends_with('\n'));
+        let rows = ndjson
+            .lines()
+            .map(serde_json::from_str::<serde_json::Value>)
+            .collect::<serde_json::Result<Vec<_>>>()
+            .unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["Key"], "42");
+        assert_eq!(rows[0]["Value"], 7);
+        assert_eq!(rows[1]["Key"], "84");
+        assert_eq!(rows[1]["Nested"], serde_json::json!([1, 2]));
+        assert_eq!(
+            serialize_ztable(&serde_json::json!({}), ZtableFormat::Ndjson).unwrap(),
+            b""
+        );
     }
 }

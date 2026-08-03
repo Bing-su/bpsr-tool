@@ -11,7 +11,7 @@ It can:
 ## Usage
 
 ```bash
-bpsr-tool extract --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--all] [--asset-bundles] [--language english]
+bpsr-tool extract --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--all] [--asset-bundles] [--language english] [--format json-pretty]
 ```
 
 | Option             | Description                                                  |
@@ -22,10 +22,18 @@ bpsr-tool extract --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--al
 | `--all`            | Extract all package entries in addition to localized ZTables |
 | `--asset-bundles`  | Include UnityFS bundles; requires `--all`                    |
 | `--language`, `-l` | ZTable language (default: `english`)                         |
+| `--format`         | ZTable output format (default: `json-pretty`)                |
 
-By default, only localized ZTable JSON files are produced. Use `--all` to
-extract the remaining package entries, and add `--asset-bundles` to include
-UnityFS bundles.
+### ZTable output formats
+
+| Value         | Extension | Structure                                     |
+| ------------- | --------- | --------------------------------------------- |
+| `json-pretty` | `.json`   | Pretty-printed object keyed by table row      |
+| `json`        | `.json`   | Compact object keyed by table row             |
+| `ndjson`      | `.ndjson` | One object per line with a string `Key` field |
+
+Use `--all` to extract the remaining package entries, and add
+`--asset-bundles` to include UnityFS bundles.
 
 ## DLL generation
 
