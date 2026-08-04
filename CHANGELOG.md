@@ -1,3 +1,17 @@
+## [0.4.0] - 2026-08-04
+
+### 🚀 Features
+
+- Add configurable ZTable output formats
+
+### 🐛 Bug Fixes
+
+- Don't inject 'Key' field into ndjson format
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v0.4.0
+
 ## [0.3.0] - 2026-08-01
 
 ### 🚀 Features
