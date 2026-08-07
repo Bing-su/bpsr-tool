@@ -13,7 +13,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 use pkg::Package;
 use rayon::prelude::*;
 use tracing::{debug, info, warn};
-use tracing_subscriber::EnvFilter;
 
 #[derive(Clone, Debug, ValueEnum)]
 #[value(rename_all = "lower")]
@@ -122,12 +121,7 @@ struct Il2cppArgs {
 }
 
 fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .with_target(false)
-        .init();
+    tracing_subscriber::fmt().with_target(false).init();
 
     if let Err(error) = run(Args::parse().command) {
         eprintln!("error: {error:#}");
