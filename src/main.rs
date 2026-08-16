@@ -291,6 +291,7 @@ pub(crate) fn hash33(value: &str) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn hash_matches_original() {
@@ -308,14 +309,16 @@ mod tests {
         );
     }
 
-    #[test]
-    fn output_directories_follow_extraction_options() {
-        assert_eq!(output_dirs(false, false), ["ZTable"]);
-        assert_eq!(output_dirs(true, false), ["ZTable", "Proto", "Lua", "Unk"]);
-        assert_eq!(
-            output_dirs(true, true),
-            ["ZTable", "Proto", "Lua", "Unk", "Bundles"]
-        );
+    #[rstest]
+    #[case(false, false, &["ZTable"])]
+    #[case(true, false, &["ZTable", "Proto", "Lua", "Unk"])]
+    #[case(true, true, &["ZTable", "Proto", "Lua", "Unk", "Bundles"])]
+    fn output_directories_follow_extraction_options(
+        #[case] all: bool,
+        #[case] bundles: bool,
+        #[case] expected: &[&str],
+    ) {
+        assert_eq!(output_dirs(all, bundles), expected);
     }
 
     #[test]
@@ -336,40 +339,39 @@ mod tests {
         ));
     }
 
+    #[rstest]
+    #[case("json-pretty", ZtableFormat::JsonPretty)]
+    #[case("json", ZtableFormat::Json)]
+    #[case("json-array", ZtableFormat::JsonArray)]
+    #[case("ndjson", ZtableFormat::Ndjson)]
+    fn parses_ztable_formats(#[case] name: &str, #[case] expected: ZtableFormat) {
+        let Command::Extract(args) =
+            Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg", "--format", name])
+                .unwrap()
+                .command
+        else {
+            panic!("expected extract command");
+        };
+        assert_eq!(args.format, expected);
+    }
+
     #[test]
-    fn parses_ztable_formats() {
-        for (name, expected) in [
-            ("json-pretty", ZtableFormat::JsonPretty),
-            ("json", ZtableFormat::Json),
-            ("json-array", ZtableFormat::JsonArray),
-            ("ndjson", ZtableFormat::Ndjson),
-        ] {
-            let Command::Extract(args) =
-                Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg", "--format", name])
-                    .unwrap()
-                    .command
-            else {
-                panic!("expected extract command");
-            };
-            assert_eq!(args.format, expected);
-        }
+    fn rejects_unknown_ztable_format() {
         assert!(
             Args::try_parse_from(["bpsr-tool", "extract", "-p", "meta.pkg", "--format", "csv"])
                 .is_err()
         );
     }
 
-    #[test]
-    fn serializes_json_objects() {
+    #[rstest]
+    #[case(ZtableFormat::JsonPretty, "{\n  \"42\": {\n    \"Id\": 42\n  }\n}")]
+    #[case(ZtableFormat::Json, r#"{"42":{"Id":42}}"#)]
+    fn serializes_json_objects(#[case] format: ZtableFormat, #[case] expected: &str) {
         let value = serde_json::json!({"42": {"Id": 42}});
 
         assert_eq!(
-            String::from_utf8(serialize_ztable(&value, ZtableFormat::JsonPretty).unwrap()).unwrap(),
-            "{\n  \"42\": {\n    \"Id\": 42\n  }\n}"
-        );
-        assert_eq!(
-            String::from_utf8(serialize_ztable(&value, ZtableFormat::Json).unwrap()).unwrap(),
-            r#"{"42":{"Id":42}}"#
+            String::from_utf8(serialize_ztable(&value, format).unwrap()).unwrap(),
+            expected
         );
     }
 

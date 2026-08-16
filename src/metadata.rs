@@ -156,15 +156,30 @@ fn classify(name: &str) -> FieldKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("System.Int32", FieldKind::I32)]
+    #[case(
+        "valuetype [UnityEngine.CoreModule]UnityEngine.Vector3",
+        FieldKind::Vector3
+    )]
+    fn maps_known_types(#[case] name: &str, #[case] expected: FieldKind) {
+        assert_eq!(
+            std::mem::discriminant(&classify(name)),
+            std::mem::discriminant(&expected)
+        );
+    }
+
     #[test]
-    fn maps_known_types() {
-        assert!(matches!(classify("System.Int32"), FieldKind::I32));
-        assert!(matches!(
-            classify("valuetype [UnityEngine.CoreModule]UnityEngine.Vector3"),
-            FieldKind::Vector3
-        ));
+    fn reports_inline_size() {
         assert_eq!(FieldKind::Vector3.inline_size(), 12);
-        assert_eq!(table_name("AvatarShowTableBase"), "AvatarShowTable");
-        assert_eq!(table_name("LegacyTableData"), "LegacyTable");
+    }
+
+    #[rstest]
+    #[case("AvatarShowTableBase", "AvatarShowTable")]
+    #[case("LegacyTableData", "LegacyTable")]
+    fn strips_table_name_suffix(#[case] name: &str, #[case] expected: &str) {
+        assert_eq!(table_name(name), expected);
     }
 }
