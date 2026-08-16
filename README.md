@@ -30,6 +30,7 @@ bpsr-tool extract --pkg <meta.pkg> --output <directory> [--dll <DummyDll>] [--al
 | ------------- | --------- | ---------------------------------------- |
 | `json-pretty` | `.json`   | Pretty-printed object keyed by table row |
 | `json`        | `.json`   | Compact object keyed by table row        |
+| `json-array`  | `.json`   | Compact array of table row objects       |
 | `ndjson`      | `.ndjson` | One table row object per line            |
 
 Use `--all` to extract the remaining package entries, and add

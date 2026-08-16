@@ -35,13 +35,14 @@ enum Language {
 enum ZtableFormat {
     JsonPretty,
     Json,
+    JsonArray,
     Ndjson,
 }
 
 impl ZtableFormat {
     fn extension(self) -> &'static str {
         match self {
-            Self::JsonPretty | Self::Json => "json",
+            Self::JsonPretty | Self::Json | Self::JsonArray => "json",
             Self::Ndjson => "ndjson",
         }
     }
@@ -235,6 +236,13 @@ fn serialize_ztable(value: &serde_json::Value, format: ZtableFormat) -> Result<V
     match format {
         ZtableFormat::JsonPretty => Ok(serde_json::to_vec_pretty(value)?),
         ZtableFormat::Json => Ok(serde_json::to_vec(value)?),
+        ZtableFormat::JsonArray => Ok(serde_json::to_vec(
+            &value
+                .as_object()
+                .context("ZTable is not an object")?
+                .values()
+                .collect::<Vec<_>>(),
+        )?),
         ZtableFormat::Ndjson => {
             let mut output = Vec::new();
             for row in value
@@ -333,6 +341,7 @@ mod tests {
         for (name, expected) in [
             ("json-pretty", ZtableFormat::JsonPretty),
             ("json", ZtableFormat::Json),
+            ("json-array", ZtableFormat::JsonArray),
             ("ndjson", ZtableFormat::Ndjson),
         ] {
             let Command::Extract(args) =
@@ -351,35 +360,48 @@ mod tests {
     }
 
     #[test]
-    fn serializes_ztable_formats() {
+    fn serializes_json_objects() {
+        let value = serde_json::json!({"42": {"Id": 42}});
+
+        assert_eq!(
+            String::from_utf8(serialize_ztable(&value, ZtableFormat::JsonPretty).unwrap()).unwrap(),
+            "{\n  \"42\": {\n    \"Id\": 42\n  }\n}"
+        );
+        assert_eq!(
+            String::from_utf8(serialize_ztable(&value, ZtableFormat::Json).unwrap()).unwrap(),
+            r#"{"42":{"Id":42}}"#
+        );
+    }
+
+    #[test]
+    fn serializes_json_array() {
         let value = serde_json::json!({
             "42": {"Id": 42, "Value": 7},
             "84": {"Id": 84, "Nested": [1, 2]}
         });
-        let pretty = serialize_ztable(&value, ZtableFormat::JsonPretty).unwrap();
-        let compact = serialize_ztable(&value, ZtableFormat::Json).unwrap();
+        let array: serde_json::Value =
+            serde_json::from_slice(&serialize_ztable(&value, ZtableFormat::JsonArray).unwrap())
+                .unwrap();
         assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&pretty).unwrap(),
-            serde_json::from_slice::<serde_json::Value>(&compact).unwrap()
+            array,
+            serde_json::json!([
+                {"Id": 42, "Value": 7},
+                {"Id": 84, "Nested": [1, 2]}
+            ])
         );
-        assert!(String::from_utf8(pretty).unwrap().contains('\n'));
-        assert!(!String::from_utf8(compact).unwrap().contains('\n'));
+    }
 
-        let ndjson =
-            String::from_utf8(serialize_ztable(&value, ZtableFormat::Ndjson).unwrap()).unwrap();
-        assert!(ndjson.ends_with('\n'));
-        let rows = ndjson
-            .lines()
-            .map(serde_json::from_str::<serde_json::Value>)
-            .collect::<serde_json::Result<Vec<_>>>()
-            .unwrap();
-        assert_eq!(rows.len(), 2);
-        assert_eq!(rows[0]["Id"], 42);
-        assert!(rows[0].get("Key").is_none());
-        assert_eq!(rows[0]["Value"], 7);
-        assert_eq!(rows[1]["Id"], 84);
-        assert!(rows[1].get("Key").is_none());
-        assert_eq!(rows[1]["Nested"], serde_json::json!([1, 2]));
+    #[test]
+    fn serializes_ndjson() {
+        let value = serde_json::json!({
+            "42": {"Id": 42, "Value": 7},
+            "84": {"Id": 84, "Nested": [1, 2]}
+        });
+
+        assert_eq!(
+            String::from_utf8(serialize_ztable(&value, ZtableFormat::Ndjson).unwrap()).unwrap(),
+            "{\"Id\":42,\"Value\":7}\n{\"Id\":84,\"Nested\":[1,2]}\n"
+        );
         assert_eq!(
             serialize_ztable(&serde_json::json!({}), ZtableFormat::Ndjson).unwrap(),
             b""
