@@ -54,10 +54,7 @@ impl FieldKind {
 
 pub(crate) fn read_tables(path: &Utf8Path) -> Result<Vec<Table>> {
     let bytes = fs::read(path)?;
-    let options = ReadOptions {
-        skip_method_bodies: true,
-        ..Default::default()
-    };
+    let options = ReadOptions::new().with_skip_method_bodies(true);
     let resolution =
         Resolution::parse(&bytes, options).context("invalid .NET metadata in Panda.Table.dll")?;
 
